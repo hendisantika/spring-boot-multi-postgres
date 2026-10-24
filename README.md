@@ -1,5 +1,10 @@
 # Spring Boot Multi PostgreSQL with Automatic Failover
 
+[![Java CI with Maven](https://github.com/hendisantika/spring-boot-multi-postgres/actions/workflows/maven.yml/badge.svg)](https://github.com/hendisantika/spring-boot-multi-postgres/actions/workflows/maven.yml)
+![Java](https://img.shields.io/badge/Java-25-orange?logo=openjdk)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-6DB33F?logo=springboot)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-18-4169E1?logo=postgresql)
+
 A Spring Boot application demonstrating automatic database failover between multiple PostgreSQL 18 instances with a
 RESTful CRUD API for product management.
 
@@ -13,17 +18,20 @@ RESTful CRUD API for product management.
 - ✅ **JPA/Hibernate**: ORM with automatic schema generation
 - ✅ **Connection Pool**: HikariCP for efficient database connections
 - ✅ **Lombok**: Reduces boilerplate code
+- ✅ **Testcontainers**: Integration tests (including failover) run against real PostgreSQL 18 containers
+- ✅ **CI & Dependabot**: GitHub Actions build on JDK 25 with grouped, automated dependency updates
 
 ## Technologies
 
-- **Java 25**
-- **Spring Boot 3.5.7**
+- **Java 25** (LTS)
+- **Spring Boot 4.1.1**
 - **PostgreSQL 18**
 - **Spring Data JPA**
 - **HikariCP**
 - **Lombok**
+- **Testcontainers 2**
 - **Docker & Docker Compose**
-- **Maven**
+- **Maven 3.9 (via Maven Wrapper)**
 
 ## Database Configuration
 
@@ -44,8 +52,8 @@ RESTful CRUD API for product management.
 ## Prerequisites
 
 - Java 25 or higher
-- Maven 3.9+
-- Docker & Docker Compose
+- Maven 3.9+ (or just use the bundled `./mvnw`)
+- Docker & Docker Compose (also required to run the tests)
 - PostgreSQL client (optional, for testing)
 
 ## Installation & Setup
@@ -53,7 +61,7 @@ RESTful CRUD API for product management.
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/hendisantika/spring-boot-multi-postgres.git
 cd spring-boot-multi-postgres
 ```
 
@@ -198,7 +206,14 @@ java -jar target/multi-postgres-0.0.1-SNAPSHOT.jar
 
 ```
 spring-boot-multi-postgres/
+├── .github/
+│   ├── dependabot.yml                               # Automated dependency updates
+│   └── workflows/maven.yml                          # CI: build & test on JDK 25
 ├── src/
+│   ├── test/
+│   │   └── java/id/my/hendisantika/multipostgres/
+│   │       ├── SpringBootMultiPostgresApplicationTests.java  # Boots app against primary DB
+│   │       └── DatabaseFailoverTests.java                    # Verifies failover to DB2
 │   └── main/
 │       ├── java/
 │       │   └── id/my/hendisantika/multipostgres/
@@ -229,18 +244,15 @@ The `DatabaseConfig` class implements automatic failover logic:
 
 ```java
 // Simplified failover logic
-try{
-// Try primary database
-HikariDataSource primaryDataSource = createDataSource(primaryConfig);
-
-        testConnection(primaryDataSource);
+try {
+    // Try primary database
+    HikariDataSource primaryDataSource = createDataSource(primaryConfig);
+    testConnection(primaryDataSource);
     return primaryDataSource;
-}catch(
-        Exception e){
-        // Failover to secondary
-        HikariDataSource secondaryDataSource = createDataSource(secondaryConfig);
-
-        testConnection(secondaryDataSource);
+} catch (Exception e) {
+    // Failover to secondary
+    HikariDataSource secondaryDataSource = createDataSource(secondaryConfig);
+    testConnection(secondaryDataSource);
     return secondaryDataSource;
 }
 ```
@@ -325,15 +337,35 @@ tail -f app.log
 
 ### Run Tests
 
+Tests use [Testcontainers](https://testcontainers.com/) to start throwaway `postgres:18` containers, so Docker must be
+running. You don't need to start `docker-compose` first.
+
 ```bash
-./mvnw test
+./mvnw verify
 ```
+
+| Test class                                 | What it checks                                                          |
+|--------------------------------------------|-------------------------------------------------------------------------|
+| `SpringBootMultiPostgresApplicationTests`  | The application starts and connects to the PRIMARY database (DB1)      |
+| `DatabaseFailoverTests`                    | With DB1 unreachable, the app fails over to DB2 and can persist products |
 
 ### Build Without Tests
 
 ```bash
 ./mvnw clean package -DskipTests
 ```
+
+## Continuous Integration & Dependency Updates
+
+- **GitHub Actions** (`.github/workflows/maven.yml`) runs `./mvnw verify` on JDK 25 (Temurin) for every push and pull
+  request to `main`, including the Testcontainers integration tests. On `main` it also submits the Maven dependency
+  graph to GitHub for better Dependabot alerts.
+- **Dependabot** (`.github/dependabot.yml`) checks for updates to:
+    - **Maven** (daily): Spring Boot, Testcontainers and Maven plugins are grouped, and other minor/patch bumps are
+      bundled into one PR
+    - **GitHub Actions** (daily): grouped into a single PR
+    - **Docker Compose** (weekly): `postgres` images. Major versions are ignored because they need a manual data
+      migration
 
 ## Author
 
