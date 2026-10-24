@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # Maven dependencies (Spring Boot parent, Testcontainers, drivers, plugins)
   - package-ecosystem: maven
     directory: "/"
     schedule:
@@ -7,6 +8,27 @@ updates:
       time: '05:00'
       timezone: Asia/Jakarta
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: "build(deps)"
+      prefix-development: "build(deps-dev)"
+      include: scope
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework.boot:*"
+      testcontainers:
+        patterns:
+          - "org.testcontainers:*"
+      maven-plugins:
+        patterns:
+          - "org.apache.maven.plugins:*"
+      # Bundle remaining minor/patch bumps into a single PR to reduce noise
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  # GitHub Actions used in .github/workflows
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -14,3 +36,25 @@ updates:
       time: '05:00'
       timezone: Asia/Jakarta
     open-pull-requests-limit: 10
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  # PostgreSQL images in docker-compose.yml
+  - package-ecosystem: "docker-compose"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: '05:00'
+      timezone: Asia/Jakarta
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(docker)"
+    ignore:
+      # Major PostgreSQL upgrades need a manual data migration (pg_upgrade / dump & restore)
+      - dependency-name: "postgres"
+        update-types: [ "version-update:semver-major" ]
