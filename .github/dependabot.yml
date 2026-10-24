@@ -9,8 +9,8 @@ updates:
       timezone: Asia/Jakarta
     open-pull-requests-limit: 10
     commit-message:
-      prefix: "build(deps)"
-      prefix-development: "build(deps-dev)"
+      # "include: scope" appends (deps) / (deps-dev) → build(deps): ...
+      prefix: "build"
       include: scope
     groups:
       spring-boot:
